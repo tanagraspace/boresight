@@ -1,0 +1,29 @@
+# Everything boresight needs for one pass, in a single file.
+# Run with:  boresight --config examples/config/pass.toml
+# Paths are relative to this file.
+
+attitude   = "attitude.csv"
+time_col   = "time"
+quat_cols  = ["ukf_X x", "ukf_X y", "ukf_X z", "ukf_X k"]
+
+tle_file   = "sat.tle"
+
+target_name = "Legnica"
+target_ecef = [3845782.0, 1114412.25, 4948097.5]   # metres; or target_lat / target_lon
+
+reference  = "2026-06-10T21:21:20Z"
+carrier_hz = 1296000000.0
+boresight  = [1, 0, 0]
+playback   = 60.0   # fast playback; 0 starts paused
+
+windows = [
+  [9.86, 29.86],
+  [33.04, 53.04],
+  [55.78, 75.78],
+  [79.44, 99.44],
+  [102.43, 122.43],
+  [126.02, 146.02],
+]
+
+[markers]
+"experiment start" = "2026-06-10T21:21:23Z"
