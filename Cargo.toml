@@ -1,0 +1,31 @@
+[package]
+name = "boresight"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+description = "Animated terminal visualizer for spacecraft attitude and target pointing: a ground track, a boresight error scope, and a synchronized pointing-error / elevation chart, driven by attitude telemetry and a TLE."
+license = "MIT"
+repository = "https://github.com/tanagraspace/boresight"
+readme = "README.md"
+keywords = ["satellite", "attitude", "pointing", "tle", "tui"]
+categories = ["command-line-utilities", "science", "visualization"]
+publish = false
+
+[[bin]]
+name = "boresight"
+path = "src/main.rs"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = "0.28"
+sgp4 = "2"
+nalgebra = "0.33"
+chrono = "0.4"
+csv = "1"
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+[profile.release]
+opt-level = 3

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-D3Z8PVELJD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-D3Z8PVELJD');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>boresight — spacecraft attitude &amp; pointing TUI</title>
+  <meta name="description" content="boresight is a terminal visualizer for spacecraft attitude and target pointing: a ground track, a boresight error scope, and a synchronized pointing-error and elevation chart, driven by attitude telemetry and a TLE.">
+  <meta name="keywords" content="spacecraft, satellite, attitude, pointing, ADCS, boresight, ground track, TLE, SGP4, Doppler, TUI, terminal, ratatui, Rust, OPS-SAT">
+  <meta name="author" content="Tanagra Space">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://tanagraspace.com/boresight/">
+  <meta property="og:title" content="boresight — spacecraft attitude & pointing TUI">
+  <meta property="og:description" content="Watch a spacecraft point at a ground target, in your terminal: ground track, boresight error scope, and a synchronized pointing-error / elevation chart.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tanagraspace.com/boresight/">
+  <meta property="og:site_name" content="Tanagra Space">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="boresight — spacecraft attitude & pointing TUI">
+  <meta name="twitter:description" content="Watch a spacecraft point at a ground target, in your terminal.">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon/favicon.svg">
+  <link rel="icon" type="image/png" href="/assets/favicon/favicon.png">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", "Helvetica Neue", "Lucida Grande", Arial, sans-serif; line-height: 1.5; background-color: #e8d5b7; color: #000; }
+    .hero { position: relative; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://tanagraspace.com/assets/img/splash.jpg'); background-size: cover; background-position: center; min-height: 280px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 2rem; }
+    .hero h1 { color: #fff; font-size: 2.5rem; font-weight: 700; margin-bottom: 0.25rem; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.5); }
+    .hero p { color: #fff; font-size: 1.2rem; max-width: 640px; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 2px 2px 4px rgba(0,0,0,0.5); }
+    .content { max-width: 800px; margin: 0 auto; padding: 2rem; }
+    h2 { color: #000; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #fc3a52; padding-bottom: 0.5rem; }
+    a { color: #e3344a; text-decoration: none; }
+    a:hover { color: #ea6777; }
+    a:visited { color: #aa2738; }
+    ul { padding-left: 1.5rem; }
+    li { margin-bottom: 0.5em; }
+    code { font-family: "SF Mono", "Menlo", "Monaco", "Courier New", monospace; font-size: 0.9em; }
+    p code, li code { background: #ddd0ba; padding: 0.1em 0.35em; border-radius: 3px; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 1em; border-radius: 4px; overflow-x: auto; font-size: 0.85em; margin: 1em 0; }
+    pre code { background: none; padding: 0; }
+    pre .comment { color: #6a9955; }
+    pre .cmd { color: #dcdcaa; }
+    pre .path { color: #9cdcfe; }
+
+    /* Demo figure / GIF placeholder */
+    .demo { margin: 1.5rem 0; }
+    .demo img { width: 100%; border-radius: 4px; border: 1px solid #baaa92; display: block; }
+    .demo-placeholder { display: flex; align-items: center; justify-content: center; min-height: 260px; border: 2px dashed #baaa92; border-radius: 4px; background: #ddd0ba; color: #6b5d45; font-size: 1.05rem; text-align: center; padding: 1rem; }
+    .demo figcaption { font-size: 0.9rem; color: #5b5040; margin-top: 0.5rem; text-align: center; }
+
+    /* Boresight scope animation: a target blip converging on the crosshair,
+       fading red -> amber -> green as the pointing error shrinks to zero. */
+    .scope { position: relative; width: 132px; height: 132px; margin: 0.75rem 0 1.5rem 0; }
+    .scope .ring { position: absolute; top: 50%; left: 50%; border: 1px solid rgba(255,255,255,0.45); border-radius: 50%; transform: translate(-50%, -50%); }
+    .scope .ring.r1 { width: 132px; height: 132px; }
+    .scope .ring.r2 { width: 88px; height: 88px; }
+    .scope .ring.r3 { width: 44px; height: 44px; }
+    .scope .cross-h, .scope .cross-v { position: absolute; top: 50%; left: 50%; background: rgba(255,255,255,0.35); }
+    .scope .cross-h { width: 132px; height: 1px; transform: translate(-50%, -50%); }
+    .scope .cross-v { width: 1px; height: 132px; transform: translate(-50%, -50%); }
+    .scope .blip { position: absolute; top: 50%; left: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; animation: converge 4.5s ease-in-out infinite; }
+    @keyframes converge {
+      0%        { transform: translate(46px, -34px); background: #fc3a52; box-shadow: 0 0 9px #fc3a52; }
+      30%       { transform: translate(30px, -10px); background: #f0a030; box-shadow: 0 0 9px #f0a030; }
+      55%       { transform: translate(11px, -6px);  background: #b5d23a; box-shadow: 0 0 9px #b5d23a; }
+      72%, 90%  { transform: translate(0, 0);        background: #3ad07a; box-shadow: 0 0 12px #3ad07a; }
+      100%      { transform: translate(46px, -34px); background: #fc3a52; box-shadow: 0 0 9px #fc3a52; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <h1>boresight</h1>
+    <div class="scope" aria-hidden="true">
+      <span class="ring r1"></span>
+      <span class="ring r2"></span>
+      <span class="ring r3"></span>
+      <span class="cross-h"></span>
+      <span class="cross-v"></span>
+      <span class="blip"></span>
+    </div>
+    <p>Watch a spacecraft point at a ground target, in your terminal.</p>
+  </header>
+  <div class="content">
+    <p>The <code>boresight</code> TUI replays a spacecraft pass in your terminal and shows, second by second, how well the spacecraft held its aim at a ground target.</p>
+    <p style="margin-top:1em;">Given the pass' attitude telemetry and a TLE, <code>boresight</code> propagates the orbit, reconstructs the body attitude, and measures the angle between the chosen boresight axis and the line to the target. A ground track, a boresight error scope, and a synchronized pointing-error / elevation chart all share one timeline, so they move together as you play, scrub, or jump between events.</p>
+    <p style="margin-top:1em;">By <a href="https://georges.fyi">georges.fyi</a> at <a href="https://tanagraspace.com/">Tanagra Space</a>, under the <a href="https://github.com/tanagraspace/boresight/blob/main/LICENSE">MIT License</a>.</p>
+
+    <!-- Recorded with VHS; regenerate via: vhs docs/boresight-demo-40x.tape -->
+    <figure class="demo">
+      <img src="boresight-demo-40x.gif" alt="boresight replaying a pass at 40x speed"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <div class="demo-placeholder" style="display:none;">▶ demo GIF coming soon: the tool replaying a full pass at 40&times; playback</div>
+      <figcaption>A pass at 40&times;: ground track, scope, and chart cursor in lockstep.</figcaption>
+    </figure>
+
+    <h2>What it shows</h2>
+    <ul>
+      <li><strong>Ground track</strong> over a coastline map with major world capitals, the target, and the moving sub-satellite point, colored sunlit / in eclipse.</li>
+      <li><strong>Boresight error scope</strong>: a polar view with the target plotted at a radius equal to the pointing error, green when on target and fading through amber to red as it drifts.</li>
+      <li><strong>Pointing-error &amp; elevation chart</strong> versus time, with the windows of interest marked and a playback cursor.</li>
+      <li><strong>Doppler / range-rate strip</strong> showing the signed curve crossing zero at closest approach.</li>
+      <li><strong>Analysis tables</strong>: a per-window summary and a scrollable whole-pass table at a step you choose.</li>
+    </ul>
+
+    <h2>Quick start</h2>
+    <pre><code><span class="cmd">git</span> clone <span class="path">https://github.com/tanagraspace/boresight</span>
+<span class="cmd">cd</span> boresight
+<span class="cmd">cargo</span> build --release
+
+<span class="comment"># run a bundled example</span>
+<span class="path">examples/config/run.sh</span>                 <span class="comment"># everything from one config file</span>
+<span class="path">examples/minimal/run.sh</span>                <span class="comment"># minimum required input</span>
+<span class="path">examples/legnica-2026-06-10/run.sh</span>     <span class="comment"># the full set of input params and flags</span></code></pre>
+    <p>Inputs can be passed as flags or bundled in a single TOML file: an attitude CSV, a TLE (inline or a file), a target by lat/lon or ECEF, the boresight axis, windows of interest, and an optional carrier frequency for Doppler. Non-interactive <code>--dump-table</code>, <code>--snapshot</code>, and <code>--export-csv</code> modes are available for previews, docs, and downstream analysis.</p>
+
+    <h2>Resources</h2>
+    <ul>
+      <li><a href="https://github.com/tanagraspace/boresight">GitHub Repository</a></li>
+      <li><a href="https://github.com/tanagraspace/boresight/blob/main/LICENSE">MIT License</a></li>
+      <li><a href="https://celestrak.org/NORAD/elements/">Celestrak: TLE element sets</a></li>
+    </ul>
+  </div>
+</body>
+</html>
